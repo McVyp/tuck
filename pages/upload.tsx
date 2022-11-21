@@ -12,16 +12,22 @@ const Upload = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [videoAsset, setVideoAsset] = useState<SanityAssetDocument | undefined>();
   const[wrongFileType, setWrongFileType] = useState(false);
+  const[caption, setCaption] = useState('');
+  const[category, setCategory] = useState(topics[0].name);
+  const[savingPost, setSavingPost] = useState(false);
+
+  const {userProfile} :{userProfile:any} = useAuthStore();
+
+  const router = useRouter()
 
   const uploadVideo = async (e:any) => {
-    const selectedFile = await e.target.files[0];
+    const selectedFile = e.target.files[0];
     const fileTypes = ['video/mp4', 'video/webm','video/ogg'];
     if (fileTypes.includes(selectedFile.type)) {
         setWrongFileType(false);
         setIsLoading(true);
   
-        client.assets
-          .upload('file', selectedFile, {
+        client.assets.upload('file', selectedFile, {
             contentType: selectedFile.type,
             filename: selectedFile.name,
           })
@@ -37,6 +43,33 @@ const Upload = () => {
         setWrongFileType(true);
       }
   }
+
+  const handlePost = async  () =>{
+    if(caption && videoAsset?._id && category) {
+        setSavingPost(true);
+        const document ={
+            _type: 'post',
+            caption,
+            video:{
+                _type: 'file',
+                asset:{
+                    _type: 'reference',
+                    _ref: videoAsset?._id
+                }
+            },
+            userId: userProfile?._id,
+            postedBy:{
+                _type: 'postedBy',
+                _ref: userProfile?._id
+            },
+            topic: category
+        }
+
+        await axios.post('http://localhost:3000/api/post', document);
+        router.push('/');
+    }
+  }
+
   return (
     <div className='flex w-full h-full absolute left-0 top-[60px] mb-10 pt-10 lg:pt-20 bg-gray-200 justify-center'>
         <div className='bg-white rounded-lg lg:h-[80vh] flex-wrap flex gap-6 items-center p-14 pt-6 w-[60%] justify-between '>
@@ -102,13 +135,13 @@ const Upload = () => {
                     <label className='text-md font-md'>Caption</label>
                     <input
                         type="text"
-                        value=""
-                         onChange={()=>{}}
+                        value={caption}
+                         onChange={(e)=>{setCaption(e.target.value)}}
                          className="rounded outline-none border-2 border-gray-200 p-2"
                     />
                     <label className='text-md font-md'>Choose Category</label>
                     <select
-                        onChange={()=>{}}
+                        onChange={(e)=>{setCategory(e.target.value)}}
                         className="outline-none border-2 border-gray-200 text-md capitalize lg:p-4 p-2 rounded cursor-pointer"
                     >
                         {topics.map((topic) => (
@@ -128,7 +161,7 @@ const Upload = () => {
                                 Discard
                             </button>
                             <button
-                                onClick={()=>{}}
+                                onClick={handlePost}
                                 type='button'
                                 className='bg-pink-200 text-white text-md font-medium p-2 rounded w-28 lg:w-44 outline-none'
                             >
